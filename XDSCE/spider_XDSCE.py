@@ -3,7 +3,7 @@ import urllib.request,re
 import sys
 
 sys.path.append('..')
-from common.sendmail import *
+from common import sendmail
 
 
 def showresult(func):
@@ -79,7 +79,7 @@ def Update():
 			res = Catch(sys.path[0]+'/log'+'/%s.html'%i)
 			#if pushover.SendWX(res["title"],res["time"]+'\n'+res["detail"],url='http://ce.xidian.edu.cn/info/1021/%s.htm'%i):
 			url='http://ce.xidian.edu.cn/info/1021/%s.htm'%i
-			if SendMail("454888912@qq.com","西电网信院",res["title"],res["time"]+'\n'+res["detail"]+'\n'+url):
+			if sendmail.SendMail("454888912@qq.com","西电网信院",res["title"],res["time"]+'\n'+res["detail"]+'\n'+url):
 				print("发送失败")
 			else:
 				print("发送成功")
