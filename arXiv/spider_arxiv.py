@@ -16,9 +16,10 @@ def showresult(func):
 	return wrapper
 
 class arxiv_paper(object):
-	def __init__(self,arxiv_id,title,subject):
+	def __init__(self,arxiv_id,title,author,subject):
 		self.arxiv_id = arxiv_id
 		self.title = title
+		self.author = author
 		self.subject = subject
 		self.page = "https://arxiv.org/abs/"+self.arxiv_id
 		self.PDF = "https://arxiv.org/pdf/"+self.arxiv_id+".pdf"
@@ -27,13 +28,13 @@ class arxiv_paper(object):
 		html = self.get_html(url)
 		tree = etree.HTML(html)
 		abs_path = tree.xpath('//blockquote[@class="abstract mathjax"]')[0]
-		abs = abs_path.xpath('string(.)').strip().replace("\n",'')
+		abs = abs_path.xpath('string(.)').strip().replace("\n",'').replace("Abstract: ","")
 		return abs
 
-	@showresult
+	#@showresult
 	def get_str(self):
 		self.abstract = self.get_abstract(self.page)
-		self.str = "\n---------------------------------------------------------\n\nTitle:%s\n\nSubjects:%s\n\n%s\n\nPage:%s\n\nPDF:%s\n\n"%(self.title,self.subject,self.abstract,self.page,self.PDF)
+		self.str = "\n---------------------------------------------------------\n\nTitle: %s\n\nAuthors: %s\n\nSubjects:%s\n\nAbstract: %s\n\nPage: %s\n\nPDF: %s\n\n"%(self.title,self.author,self.subject,self.abstract,self.page,self.PDF)
 		return self.str
 
 	
@@ -80,6 +81,11 @@ class arXiv_spider(object):
 		for i in title_path:
 			title = i.xpath('string(.)').strip().replace("Title: ",'')
 			title_list.append(title)
+		author_path = html_tree.xpath('//div[@class="list-authors"]')
+		author_list = []
+		for i in author_path:
+			author = i.xpath('string(.)').replace('\n','').replace('Authors: ','')
+			author_list.append(author)
 		subject_path = html_tree.xpath('//div[@class="list-subjects"]')
 		subject_list = []
 		for i in subject_path:
@@ -92,8 +98,9 @@ class arXiv_spider(object):
 		for i in range(num_papers):
 			paper_id = id_list[i]
 			paper_title = title_list[i]
+			paper_author = author_list[i]
 			paper_subject = subject_list[i]
-			paper = arxiv_paper(paper_id,paper_title,paper_subject)
+			paper = arxiv_paper(paper_id,paper_title,paper_author,paper_subject)
 			paper_list.append(paper)
 		
 		return paper_list
@@ -144,7 +151,7 @@ class arXiv_spider(object):
 		content = ""
 		for i in push_list:
 			content = content+i.get_str()
-		if sendmail.SendMail("yixie1997@gmail.com","arXiv推送小助手","arXiv每日关注论文",content):
+		if sendmail.SendMail("yixie1997@gmail.com","arXiv推送小助手","arXiv今日AI安全论文",content):
 			print("发送失败")
 		else:
 			print("发送成功")
