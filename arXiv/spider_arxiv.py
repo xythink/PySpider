@@ -25,7 +25,7 @@ class arxiv_paper(object):
 		self.PDF = "https://arxiv.org/pdf/"+self.arxiv_id+".pdf"
 		
 	def get_abstract(self,url):
-		html = self.get_html(url)
+		html = self.get_html(url,10)
 		tree = etree.HTML(html)
 		abs_path = tree.xpath('//blockquote[@class="abstract mathjax"]')[0]
 		abs = abs_path.xpath('string(.)').strip().replace("\n",'').replace("Abstract: ","")
@@ -38,36 +38,42 @@ class arxiv_paper(object):
 		return self.str
 
 	
-	def get_html(self,url):
+	def get_html(self,url,err_count):
 		request  =urllib.request.Request(url)
 		try:
 			response = urllib.request.urlopen(request)
 			content = response.read()#.decode('utf-8')
 		except:
+			if err_count <= 0:
+				raise TimeoutError
+			err_count -= 1
 			print("url解析错误，5秒后重新尝试！\n",url)
 			time.sleep(5)
-			content = self.get_html(url)
+			content = self.get_html(url,err_count)
 		return content
 
 class arXiv_spider(object):
 	def __init__(self,url):
 		self.url = url
-		self.index = self.get_html(url)
+		self.index = self.get_html(url,10)
 		self.html_tree = etree.HTML(self.index)
 		self.paper_list = self.parse_arxiv(self.html_tree)
 		self.log_file = sys.path[0]+"/paper_log.txt"
 		self.new_list = self.get_new(self.paper_list)
 
 	
-	def get_html(self,url):
+	def get_html(self,url,err_count):
 		request  =urllib.request.Request(url)
 		try:
 			response = urllib.request.urlopen(request)
 			content = response.read()#.decode('utf-8')
 		except:
+			if err_count <= 0:
+				raise TimeoutError
+			err_count -= 1
 			print("url解析错误，5秒后重新尝试！\n",url)
 			time.sleep(5)
-			content = self.get_html(url)
+			content = self.get_html(url,err_count)
 		return content
 	
 	def parse_arxiv(self,html_tree):
@@ -129,16 +135,21 @@ class arXiv_spider(object):
 			log = open(self.log_file,'r')
 		history = log.read()
 		log.close()
-		log = open(self.log_file,'a')
 		for paper in paper_list:
 			if paper.arxiv_id in history:
 				continue
 			else:
-				log.write("%s;"%paper.arxiv_id)
 				new_list.append(paper)
 		log.close()
 
 		return new_list
+
+	def save_list(self,paper_list):
+		log = open(self.log_file,'a')
+		list_str = str([paper.arxiv_id for paper in paper_list]).replace('[','').replace(']',';').replace(', ',';')
+		log.write(list_str)
+		log.close()
+		return 0
 	
 	def push(self,subject=None):
 		if subject == None:
@@ -155,6 +166,9 @@ class arXiv_spider(object):
 			print("发送失败")
 		else:
 			print("发送成功")
+			res = self.save_list(self.new_list)
+			if res == 0:
+				print("日志文件更新成功")
 
 
 
