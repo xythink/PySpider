@@ -46,7 +46,7 @@ class arxiv_paper(object):
 		except:
 			print("url解析错误，5秒后重新尝试！\n",url)
 			time.sleep(5)
-			self.get_html(url)
+			content = self.get_html(url)
 		return content
 
 class arXiv_spider(object):
