@@ -1,8 +1,10 @@
 #coding=utf-8
 import urllib.request
 import time
+
 from lxml import etree
 import sys,os
+import json, requests
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+'/../')
 from common import sendmail
@@ -23,18 +25,45 @@ class arxiv_paper(object):
 		self.subject = subject
 		self.page = "https://arxiv.org/abs/"+self.arxiv_id
 		self.PDF = "https://arxiv.org/pdf/"+self.arxiv_id+".pdf"
+		self.html = None
+		self.tree = None
 		
 	def get_abstract(self,url):
-		html = self.get_html(url,10)
-		tree = etree.HTML(html)
-		abs_path = tree.xpath('//blockquote[@class="abstract mathjax"]')[0]
+		self.html = self.get_html(url,10)
+		self.tree = etree.HTML(self.html)
+		abs_path = self.tree.xpath('//blockquote[@class="abstract mathjax"]')[0]
 		abs = abs_path.xpath('string(.)').strip().replace("\n",'').replace("Abstract: ","")
 		return abs
+
+	def get_comments(self, url):
+		if self.html == None:
+			self.html = self.get_html(url,10)
+		if self.tree == None:
+			self.tree = etree.HTML(self.html)
+		comments_list = self.tree.xpath('//td[@class="tablecell comments mathjax"]')
+		if len(comments_list) > 0:
+			return comments_list[0].xpath('string(.)')
+		else:
+			return 'None'
+	
+	def get_code(self):
+		url = "https://arxiv.paperswithcode.com/api/v0/repos-and-datasets/%s"%self.arxiv_id
+		response = requests.get(url)
+		js = json.loads(response.text)
+		if js['status'] != 'OK':
+			return 'None'
+		if js['code']['official'] != None:
+			return js['code']['official']['url']
+		else:
+			return 'None'
+		
 
 	#@showresult
 	def get_str(self):
 		self.abstract = self.get_abstract(self.page)
-		self.str = "\n---------------------------------------------------------\n\nTitle: %s\n\nAuthors: %s\n\nSubjects:%s\n\nAbstract: %s\n\nPage: %s\n\nPDF: %s\n\n"%(self.title,self.author,self.subject,self.abstract,self.page,self.PDF)
+		self.comments = self.get_comments(self.page)
+		self.code = self.get_code()
+		self.str = "\n---------------------------------------------------------\n\nTitle: %s\n\nComments: %s\n\nAuthors: %s\n\nSubjects:%s\n\nAbstract: %s\n\nPage: %s\n\nPDF: %s\n\nCode: %s\n\n"%(self.title,self.comments,self.author,self.subject,self.abstract,self.page,self.PDF,self.code)
 		return self.str
 
 	
@@ -82,16 +111,19 @@ class arXiv_spider(object):
 		for i in id_path:
 			id = i.replace("arXiv:",'')
 			id_list.append(id)
+
 		title_path = html_tree.xpath('///div[@class="list-title mathjax"]')
 		title_list = []
 		for i in title_path:
 			title = i.xpath('string(.)').strip().replace("Title: ",'')
 			title_list.append(title)
+
 		author_path = html_tree.xpath('//div[@class="list-authors"]')
 		author_list = []
 		for i in author_path:
 			author = i.xpath('string(.)').replace('\n','').replace('Authors: ','')
 			author_list.append(author)
+			
 		subject_path = html_tree.xpath('//div[@class="list-subjects"]')
 		subject_list = []
 		for i in subject_path:
