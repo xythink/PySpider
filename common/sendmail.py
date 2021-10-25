@@ -4,7 +4,7 @@ from email.mime.text import MIMEText
 from email.header import Header
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from readconfig import *
-  
+import sys
 
 
 def SendMail(receivers,header,subject,m):
@@ -42,5 +42,7 @@ def SendMail(receivers,header,subject,m):
 	 	return 1 
 
 
+if __name__ == '__main__':
+    SendMail(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])
 
 
